@@ -1,103 +1,170 @@
-import Image from "next/image";
+'use client';
+
+import { useState, FormEvent, useMemo } from 'react';
+
+// Define the result type to match the API response
+type ScanResult = {
+    supabaseUrl?: string;
+    anonKey?: string;
+    isLovable: boolean;
+    publicData?: Record<string, any[] | { error: string }>;
+    error?: string;
+};
+
+// --- Regex for sensitive data ---
+const PII_PATTERNS = {
+    email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    phone: /\b(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})\b/g,
+    creditCard: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})\b/g,
+    password: /password|pass|pwd/i, // Simple check for password-like fields
+};
+
+type PiiFinding = {
+    type: string;
+    value: string;
+    path: string;
+};
+
+// --- Analysis Component ---
+const AnalysisSummary = ({ publicData }: { publicData: ScanResult['publicData'] }) => {
+    const foundTypes = useMemo(() => {
+        const piiTypes = new Set<string>();
+        if (!publicData) return [];
+
+        const dataString = JSON.stringify(publicData);
+
+        for (const [type, regex] of Object.entries(PII_PATTERNS)) {
+            if (regex.test(dataString)) {
+                piiTypes.add(type);
+            }
+        }
+        return Array.from(piiTypes);
+    }, [publicData]);
+
+    if (foundTypes.length === 0) {
+        return (
+            <div className="mt-4 p-4 border border-green-500 bg-green-100 rounded-md">
+                <h3 className="text-lg font-bold text-green-900">Analysis Summary</h3>
+                <p className="text-green-800">✅ No obvious sensitive information (emails, phone numbers, etc.) was found in the public data.</p>
+            </div>
+        );
+    }
+
+    const typeToEmoji: Record<string, string> = {
+        email: '📧',
+        phone: '📞',
+        creditCard: '💳',
+        password: '🔑',
+    };
+
+    return (
+        <div className="mt-4 p-4 border border-red-500 bg-red-100 rounded-md">
+            <h3 className="text-lg font-bold text-red-900">⚠️ Analysis Summary: Potential PII Found!</h3>
+            <p className="text-red-800">The scan detected the following types of potentially sensitive data. Review the tables below carefully.</p>
+            <div className="flex flex-wrap gap-4 mt-2">
+                {foundTypes.map(type => (
+                    <div key={type} className="flex items-center gap-2 p-2 bg-red-200 rounded-md">
+                        <span className="text-2xl">{typeToEmoji[type] || '❓'}</span>
+                        <span className="font-semibold text-red-900">{type.charAt(0).toUpperCase() + type.slice(1)}s</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    const [url, setUrl] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [result, setResult] = useState<ScanResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    const handleSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setResult(null);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUrl: url }),
+            });
+
+            const data: ScanResult = await response.json();
+
+            if (!response.ok || data.error) {
+                setError(data.error || 'An unknown error occurred.');
+            } else {
+                setResult(data);
+            }
+        } catch (err) {
+            setError('Failed to connect to the scanning service.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <main className="flex min-h-screen flex-col items-center justify-between p-24">
+            <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
+                <h1 className="text-4xl font-bold text-center">Lovable Site Scanner</h1>
+                <p className="text-center">
+                    Check which Supabase-powered sites have public data.
+                </p>
+
+                <form onSubmit={handleSubmit} className="flex flex-col items-center w-full">
+                    <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://www.example.com"
+                        required
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    />
+                    <button type="submit" disabled={isLoading} className="w-full p-2 mt-2 bg-blue-500 text-white rounded-md disabled:bg-gray-400 flex justify-center items-center">
+                        {isLoading ? (
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        ) : 'Scan Site'}
+                    </button>
+                </form>
+
+                {error && <p className="text-red-500">{error}</p>}
+                
+                {result && (
+                    <div className="w-full mt-4">
+                        <h2 className="text-2xl font-bold">Scan Results</h2>
+                        {result.isLovable ? (
+                            <>
+                                <p><strong>✅ This site is lovable! (or supabase powered)</strong></p>
+                                <p><strong>Supabase URL:</strong> {result.supabaseUrl}</p>
+                                <p><strong>Anon Key:</strong> <code className="break-all">{result.anonKey}</code></p>
+                                
+                                <AnalysisSummary publicData={result.publicData} />
+
+                                <h3 className="mt-4">Public Data Found:</h3>
+                                {result.publicData && Object.entries(result.publicData).map(([path, data]) => (
+                                    <div key={path} className="mt-2 p-2 border border-gray-300 rounded-md">
+                                        <h4>{path}</h4>
+                                        <pre className="overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
+                                    </div>
+                                ))}
+                                <h5>We only check GET. If you&apos;re worried, check your POST, PUT and PATCH.</h5>
+                            </>
+                        ) : (
+                            <p><strong>❌ This site is not lovable or credentials were not found.</strong></p>
+                        )}
+                    </div>
+                )}
+            </div>
+        <footer className="w-full mt-8 text-center text-gray-500 text-sm">
+                <p>This tool should only be used for educational purposes and on sites where you have permission to scan. Be responsible and respect the privacy of others.</p>
+            </footer>
+        </main>
+    );
 }

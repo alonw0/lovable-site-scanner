@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lovable Site Scanner
 
-## Getting Started
+This is a Next.js application that allows you to scan a website to determine if it uses Supabase and has any publicly accessible data.
 
-First, run the development server:
+## How to Use
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1.  Enter the URL of the website you want to scan in the input field.
+2.  Click the "Scan Site" button.
+3.  The application will then analyze the website's assets to find Supabase credentials.
+4.  If credentials are found, it will attempt to fetch the database schema and any public data.
+5.  The results will be displayed on the page.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This application is designed for easy deployment to [Vercel](https://vercel.com/).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
 
-## Learn More
+*   A Vercel account.
+*   A GitHub, GitLab, or Bitbucket account.
 
-To learn more about Next.js, take a look at the following resources:
+### Steps
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1.  **Push to Git:** Push the code to a repository on your preferred Git provider.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2.  **Import to Vercel:**
+    *   Log in to your Vercel account.
+    *   Click the "Add New..." button and select "Project".
+    *   Import the Git repository you just created.
 
-## Deploy on Vercel
+3.  **Deploy:** Vercel will automatically detect that this is a Next.js application and configure the build settings. Click the "Deploy" button.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Vercel will then build and deploy your application. Once the deployment is complete, you will be provided with a URL where you can access your live site.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Ethical Use
+
+This tool should only be used for educational purposes and on sites where you have permission to scan. Be responsible and respect the privacy of others.
