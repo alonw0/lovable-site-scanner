@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     siteName: "Lovable Site Scanner",
     images: [
       {
-        url: "/cove.jepg",
+        url: "/cove.jpeg",
         width: 1200,
         height: 630,
       },

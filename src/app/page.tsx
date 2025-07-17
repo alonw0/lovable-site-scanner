@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useMemo } from 'react';
+import { useState, FormEvent, useMemo, useEffect } from 'react';
 
 // Define the result type to match the API response
 type ScanResult = {
@@ -20,7 +20,7 @@ const PII_PATTERNS = {
 };
 
 // --- Analysis Component ---
-const AnalysisSummary = ({ publicData }: { publicData: ScanResult['publicData'] }) => {
+const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult['publicData'], onPiiDetected: (hasPii: boolean) => void }) => {
     const foundTypes = useMemo(() => {
         const piiTypes = new Set<string>();
         if (!publicData) return [];
@@ -34,6 +34,10 @@ const AnalysisSummary = ({ publicData }: { publicData: ScanResult['publicData'] 
         }
         return Array.from(piiTypes);
     }, [publicData]);
+
+    useEffect(() => {
+        onPiiDetected(foundTypes.length > 0);
+    }, [foundTypes, onPiiDetected]);
 
     if (foundTypes.length === 0) {
         return (
@@ -73,6 +77,7 @@ export default function Home() {
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<ScanResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [hasPii, setHasPii] = useState(false);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -139,7 +144,13 @@ export default function Home() {
                                 <p><strong>Supabase URL:</strong> {result.supabaseUrl}</p>
                                 <p><strong>Anon Key:</strong> <code className="break-all">{result.anonKey}</code></p>
                                 
-                                <AnalysisSummary publicData={result.publicData} />
+                                <AnalysisSummary publicData={result.publicData} onPiiDetected={setHasPii} />
+
+                                {hasPii && (
+                                    <div className="mt-4 p-4 border border-blue-500 bg-blue-100 rounded-md text-center">
+                                        <p className="text-blue-800">Need help fixing those issues in your site or app? Contact us at <a href="mailto:contact@drorsoft.com" className="text-blue-600 hover:underline">contact@drorsoft.com</a> or visit <a href="https://www.drorsoft.com" className="text-blue-600 hover:underline">drorsoft.com</a></p>
+                                    </div>
+                                )}
 
                                 <h3 className="mt-4">Public Data Found:</h3>
                                 {result.publicData && Object.entries(result.publicData).map(([path, data]) => (
@@ -158,6 +169,10 @@ export default function Home() {
             </div>
         <footer className="w-full mt-8 text-center text-gray-500 text-sm">
                 <p>This tool should only be used for educational purposes and on sites where you have permission to scan. Be responsible and respect the privacy of others.</p>
+                <br />
+                <br />
+                <p className="text-xs">Created by <a className="text-red-500 hover:underline" href="https://www.linkedin.com/in/alonwo/">Alon Wolenitz</a></p>
+                <p className="text-xs">Powered by <a className="text-blue-600 hover:underline" href="https://www.drorsoft.com">Drorsoft</a></p>
             </footer>
         </main>
     );
