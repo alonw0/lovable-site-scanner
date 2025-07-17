@@ -7,7 +7,7 @@ type ScanResult = {
     supabaseUrl?: string;
     anonKey?: string;
     isLovable: boolean;
-    publicData?: Record<string, any[] | { error: string }>;
+    publicData?: Record<string, unknown[] | { error: string }>;
     error?: string;
 };
 
@@ -17,12 +17,6 @@ const PII_PATTERNS = {
     phone: /\b(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})\b/g,
     creditCard: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})\b/g,
     password: /password|pass|pwd/i, // Simple check for password-like fields
-};
-
-type PiiFinding = {
-    type: string;
-    value: string;
-    path: string;
 };
 
 // --- Analysis Component ---
@@ -100,7 +94,7 @@ export default function Home() {
             } else {
                 setResult(data);
             }
-        } catch (err) {
+        } catch (err: unknown) {
             setError('Failed to connect to the scanning service.');
         } finally {
             setIsLoading(false);

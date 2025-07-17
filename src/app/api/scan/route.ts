@@ -1,7 +1,5 @@
-
-
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as cheerio from 'cheerio';
 import { URL } from 'url';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
@@ -11,7 +9,7 @@ type ScanResult = {
     supabaseUrl?: string;
     anonKey?: string;
     isLovable: boolean;
-    publicData?: Record<string, any[] | { error: string }>;
+    publicData?: Record<string, unknown[] | { error: string }>;
     error?: string;
 };
 
@@ -56,7 +54,7 @@ export async function POST(request: Request) {
                             allJsCode += asset.data + '\n';
                         }).catch(err => console.error(`Failed to fetch script ${scriptUrl}: ${err.message}`))
                     );
-                } catch (e) {
+                } catch (e: unknown) {
                     console.error(`Invalid script URL found: ${src}`);
                 }
             } else {
@@ -91,8 +89,12 @@ export async function POST(request: Request) {
             try {
                 const dataResponse = await axios.get(`${restUrl}${path}`, { headers: apiHeaders, timeout: AXIOS_TIMEOUT });
                 publicData[path] = dataResponse.data;
-            } catch (error: any) {
-                 publicData[path] = { error: `Access denied or failed to fetch. Status: ${error.response?.status || 'N/A'}` };
+            } catch (error: unknown) {
+                let status = 'N/A';
+                if (axios.isAxiosError(error)) {
+                    status = error.response?.status?.toString() || 'N/A';
+                }
+                 publicData[path] = { error: `Access denied or failed to fetch. Status: ${status}` };
             }
         }
 
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
             publicData,
         }, { status: 200 });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error(error);
         if (axios.isAxiosError(error)) {
             if (error.code === 'ECONNABORTED') {
