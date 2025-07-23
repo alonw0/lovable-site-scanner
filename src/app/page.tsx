@@ -74,7 +74,7 @@ const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult
 };
 
 
-const CollapsibleData = ({ title, data }: { title: string; data: any }) => {
+const CollapsibleData = ({ title, data }: { title: string; data: unknown[] | { error: string } }) => {
     const [isOpen, setIsOpen] = useState(true);
 
     return (
@@ -208,7 +208,6 @@ export default function Home() {
                 <br />
                 <p className="text-xs">Created by <a className="text-red-500 hover:underline" href="https://www.linkedin.com/in/alonwo/">Alon Wolenitz</a></p>
                 <p className="text-xs">Powered by <a className="text-blue-600 hover:underline" href="https://www.drorsoft.com">Drorsoft</a></p>
-                <p className="text-xs">Source Code on <a className="text-gray-600 hover:underline" href="https://github.com/alonw0/lovable-site-scanner">GitHub</a></p>
             </footer>
         </main>
     );

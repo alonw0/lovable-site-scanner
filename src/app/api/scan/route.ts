@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         const apiHeaders = { apikey: anonKey, Authorization: `Bearer ${anonKey}` };
 
         // Helper function for retrying requests on 401
-        const fetchWithRetry = async (url: string, headers: any, retries = 2, delay = 1000) => {
+        const fetchWithRetry = async (url: string, headers: Record<string, string>, retries = 2, delay = 1000) => {
             try {
                 return await axios.get(url, { headers, timeout: AXIOS_TIMEOUT });
             } catch (error) {
