@@ -27,7 +27,8 @@ const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult
 
         const dataString = JSON.stringify(publicData);
 
-        for (const [type, regex] of Object.entries(PII_PATTERNS)) {
+        for (const [type, pattern] of Object.entries(PII_PATTERNS)) {
+            const regex = new RegExp(pattern.source, pattern.flags);
             if (regex.test(dataString)) {
                 piiTypes.add(type);
             }
@@ -59,6 +60,7 @@ const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult
         <div className="mt-4 p-4 border border-red-500 bg-red-100 rounded-md">
             <h3 className="text-lg font-bold text-red-900">⚠️ Analysis Summary: Potential PII Found!</h3>
             <p className="text-red-800">The scan detected the following types of potentially sensitive data. Review the tables below carefully.</p>
+            <p className="text-xs text-red-700 mt-1">(Disclaimer: This check is based on regular expressions and may not be 100% accurate. Please verify the findings.)</p>
             <div className="flex flex-wrap gap-4 mt-2">
                 {foundTypes.map(type => (
                     <div key={type} className="flex items-center gap-2 p-2 bg-red-200 rounded-md">
@@ -72,12 +74,35 @@ const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult
 };
 
 
+const CollapsibleData = ({ title, data }: { title: string; data: any }) => {
+    const [isOpen, setIsOpen] = useState(true);
+
+    return (
+        <div className="mt-2 border border-gray-300 rounded-md">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full p-2 text-left bg-gray-800 hover:bg-gray-600 flex justify-between items-center rounded-md"
+            >
+                <h4 className="font-semibold">{title}</h4>
+                <span>{isOpen ? '▼' : '▶'}</span>
+            </button>
+            {isOpen && (
+                <div className="p-2">
+                    <pre className="overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 export default function Home() {
     const [url, setUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<ScanResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [hasPii, setHasPii] = useState(false);
+    const [hasPermission, setHasPermission] = useState(false);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -111,7 +136,7 @@ export default function Home() {
             <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
                 <h1 className="text-4xl font-bold text-center">Lovable Site Scanner</h1>
                 <p className="text-center">
-                    Check which Supabase-powered sites have public data.
+                    Check your Supabase-powered sites for public data leaks.
                 </p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col items-center w-full">
@@ -123,7 +148,17 @@ export default function Home() {
                         required
                         className="w-full p-2 border border-gray-300 rounded-md"
                     />
-                    <button type="submit" disabled={isLoading} className="w-full p-2 mt-2 bg-blue-500 text-white rounded-md disabled:bg-gray-400 flex justify-center items-center">
+                    <div className="flex items-center mt-2">
+                        <input
+                            type="checkbox"
+                            id="permission-checkbox"
+                            checked={hasPermission}
+                            onChange={(e) => setHasPermission(e.target.checked)}
+                            className="mr-2"
+                        />
+                        <label htmlFor="permission-checkbox" className="text-sm">I have permission to scan this site</label>
+                    </div>
+                    <button type="submit" disabled={isLoading || !hasPermission} className="w-full p-2 mt-2 bg-blue-500 text-white rounded-md disabled:bg-gray-400 flex justify-center items-center">
                         {isLoading ? (
                             <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -147,17 +182,17 @@ export default function Home() {
                                 <AnalysisSummary publicData={result.publicData} onPiiDetected={setHasPii} />
 
                                 {hasPii && (
-                                    <div className="mt-4 p-4 border border-blue-500 bg-blue-100 rounded-md text-center">
-                                        <p className="text-blue-800">Need help fixing those issues in your site or app? Contact us at <a href="mailto:contact@drorsoft.com" className="text-blue-600 hover:underline">contact@drorsoft.com</a> or visit <a href="https://www.drorsoft.com" className="text-blue-600 hover:underline">drorsoft.com</a></p>
+                                    <div className="mt-4 p-4 border border-blue-500 bg-blue-100 rounded-md">
+                                        <p className="text-blue-600">For more info, you can refer to: <a className="underline text-red-500" href="https://docs.lovable.dev/features/security">Lovable docs</a></p>
+                                        <p className="text-blue-600">Or try this prompt (credit <i>goodtimesKC</i> from r/lovable) - <a className="underline text-red-500" href="https://www.reddit.com/r/lovable/comments/1lmkfhf/comment/n083sqr/">link</a></p>
+                                        <br />
+                                        <p className="text-blue-800">Still need help fixing those issues in your site or app? Contact us at <a href="mailto:contact@drorsoft.com" className="text-blue-600 hover:underline">contact@drorsoft.com</a> or visit <a href="https://www.drorsoft.com" className="text-blue-600 hover:underline">drorsoft.com</a></p>
                                     </div>
                                 )}
 
-                                <h3 className="mt-4">Public Data Found:</h3>
+                                                                <h3 className="mt-4">Public Data Found:</h3>
                                 {result.publicData && Object.entries(result.publicData).map(([path, data]) => (
-                                    <div key={path} className="mt-2 p-2 border border-gray-300 rounded-md">
-                                        <h4>{path}</h4>
-                                        <pre className="overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
-                                    </div>
+                                    <CollapsibleData key={path} title={path} data={data} />
                                 ))}
                                 <h5>We only check GET. If you&apos;re worried, check your POST, PUT and PATCH.</h5>
                             </>
@@ -173,6 +208,7 @@ export default function Home() {
                 <br />
                 <p className="text-xs">Created by <a className="text-red-500 hover:underline" href="https://www.linkedin.com/in/alonwo/">Alon Wolenitz</a></p>
                 <p className="text-xs">Powered by <a className="text-blue-600 hover:underline" href="https://www.drorsoft.com">Drorsoft</a></p>
+                <p className="text-xs">Source Code on <a className="text-gray-600 hover:underline" href="https://github.com/alonw0/lovable-site-scanner">GitHub</a></p>
             </footer>
         </main>
     );
