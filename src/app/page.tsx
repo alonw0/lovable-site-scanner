@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useMemo, useEffect } from 'react';
+import { useState, FormEvent, useMemo, useEffect, useCallback } from 'react';
 
 // Define the result type to match the API response
 type Permissions = {
@@ -123,15 +123,15 @@ const CollapsibleData = ({ title, data }: { title: string; data: { permissions: 
     );
 };
 
+const SENSITIVE_KEYWORDS = [
+    'admin', 'dashboard', 'auth', 'login', 'password', 'secret', 'private',
+    'api', 'config', 'env', 'backup', 'wp-admin', 'reset', 'token', 'jwt', 'manage'
+];
+
 const DiscoveredPaths = ({ paths }: { paths: string[] }) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    const SENSITIVE_KEYWORDS = [
-        'admin', 'dashboard', 'auth', 'login', 'password', 'secret', 'private',
-        'api', 'config', 'env', 'backup', 'wp-admin', 'reset', 'token', 'jwt', 'manage'
-    ];
-
-    const isSensitive = (path: string) => SENSITIVE_KEYWORDS.some(keyword => path.toLowerCase().includes(keyword));
+    const isSensitive = useCallback((path: string) => SENSITIVE_KEYWORDS.some(keyword => path.toLowerCase().includes(keyword)), []);
 
     const { sortedPaths, sensitiveCount } = useMemo(() => {
         if (!paths) return { sortedPaths: [], sensitiveCount: 0 };
@@ -141,7 +141,7 @@ const DiscoveredPaths = ({ paths }: { paths: string[] }) => {
             sortedPaths: [...sensitive, ...normal],
             sensitiveCount: sensitive.length
         };
-    }, [paths]);
+    }, [paths, isSensitive]);
 
     useEffect(() => {
         if (sensitiveCount > 0) {
@@ -220,7 +220,7 @@ export default function Home() {
                     setError(data.error);
                 }
             }
-        } catch (err: unknown) {
+        } catch {
             setError('Failed to connect to the scanning service.');
         } finally {
             setIsLoading(false);

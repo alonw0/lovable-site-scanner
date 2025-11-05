@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { URL } from 'url';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     try {
         await rateLimiter.consume(ip);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ isLovable: false, error: 'Too many requests. Please wait a minute before trying again.' }, { status: 429 });
     }
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
                             allJsCode += asset.data + '\n';
                         }).catch(err => console.error(`Failed to fetch script ${scriptUrl}: ${err.message}`))
                     );
-                } catch (e: unknown) {
+                } catch {
                     console.error(`Invalid script URL found: ${src}`);
                 }
             } else {
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
                 const { data } = await axios.get(`${restUrl}${path}`, { headers: baseHeaders, timeout: AXIOS_TIMEOUT });
                 permissions.GET = 'Allowed';
                 tableData = data;
-            } catch (error) {
+            } catch {
                 permissions.GET = 'Forbidden';
                 tableData = { error: 'Access denied or failed to fetch.' };
             }
@@ -134,8 +134,8 @@ export async function POST(request: Request) {
                         timeout: AXIOS_TIMEOUT,
                     });
                     permissions.POST = 'Allowed';
-                } catch (error: any) {
-                    if (error.response?.status === 400) {
+                } catch (error: unknown) {
+                    if (axios.isAxiosError(error) && error.response?.status === 400) {
                         permissions.POST = 'Allowed'; // Likely a data validation error, which means RLS didn't block it.
                     } else {
                         permissions.POST = 'Forbidden';
