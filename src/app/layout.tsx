@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Lovable Site Scanner",
-  description: "A Next.js app to scan websites for Supabase usage and publicly accessible data. Use ethically and with permission.",
+  description: "A simple app to scan websites for Supabase usage and publicly accessible data. Use ethically and with permission.",
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
     title: "Lovable Site Scanner",
-    description: "A Next.js app to scan websites for Supabase usage and publicly accessible data.",
+    description: "A simple app to scan websites for Supabase usage and publicly accessible data.",
     url: "https://lovable-site-scanner.vercel.app",
     siteName: "Lovable Site Scanner",
     images: [
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Lovable Site Scanner",
-    description: "A Next.js app to scan websites for Supabase usage and publicly accessible data.",
-    images: ["/cover.png"],
+    description: "A simple app to scan websites for Supabase usage and publicly accessible data.",
+    images: ["/cover.jpeg"],
   },
 };
 

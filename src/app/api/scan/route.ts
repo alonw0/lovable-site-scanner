@@ -5,11 +5,17 @@ import { URL } from 'url';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 // Define the structure of our final response
+type Permissions = {
+    GET: 'Allowed' | 'Forbidden' | 'Not Testable';
+    POST: 'Allowed' | 'Forbidden' | 'Not Testable';
+};
+
 type ScanResult = {
     supabaseUrl?: string;
     anonKey?: string;
     isLovable: boolean;
-    publicData?: Record<string, unknown[] | { error: string }>;
+    publicData?: Record<string, { permissions: Permissions; data: unknown[] | { error: string } }>;
+    discoveredPaths?: string[];
     error?: string;
 };
 
@@ -64,6 +70,16 @@ export async function POST(request: Request) {
         
         await Promise.all(scriptPromises);
 
+        // --- Path Discovery ---
+        const pathRegex = /path:\s*"([^"]+)"/g;
+        const discoveredPaths = new Set<string>();
+        let match;
+        while ((match = pathRegex.exec(allJsCode)) !== null) {
+            discoveredPaths.add(match[1]);
+        }
+        const uniquePaths = Array.from(discoveredPaths);
+
+        // --- Supabase Credential Discovery ---
         const urlRegex = /https?:\/\/[a-zA-Z0-9-]+\.supabase\.co/g;
         const keyRegex = /eyJ[a-zA-Z0-9._-]+/g;
 
@@ -71,45 +87,65 @@ export async function POST(request: Request) {
         const anonKey = allJsCode.match(keyRegex)?.[0];
 
         if (!supabaseUrl || !anonKey) {
-            return NextResponse.json({ isLovable: false, error: "Scan complete. No public Supabase credentials were found." }, { status: 200 });
+            const message = "Scan complete. No public Supabase credentials were found.";
+            return NextResponse.json({ 
+                isLovable: false, 
+                error: uniquePaths.length > 0 ? message : `${message} No client-side paths were found either.`,
+                discoveredPaths: uniquePaths 
+            }, { status: 200 });
         }
 
-        // --- Phase 2: Data Extraction ---
+        // --- Phase 2: Data Extraction & Permission Checks ---
         const restUrl = `${supabaseUrl}/rest/v1`;
-        const apiHeaders = { apikey: anonKey, Authorization: `Bearer ${anonKey}` };
+        const baseHeaders = { apikey: anonKey, Authorization: `Bearer ${anonKey}` };
 
-        // Helper function for retrying requests on 401
-        const fetchWithRetry = async (url: string, headers: Record<string, string>, retries = 2, delay = 1000) => {
-            try {
-                return await axios.get(url, { headers, timeout: AXIOS_TIMEOUT });
-            } catch (error) {
-                if (axios.isAxiosError(error) && error.response?.status === 401 && retries > 0) {
-                    console.log(`Request to ${url} failed with 401. Retrying (${retries - 1} left)...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    return fetchWithRetry(url, headers, retries - 1, delay);
-                }
-                throw error;
-            }
-        };
-
-        const schemaResponse = await fetchWithRetry(`${restUrl}/`, apiHeaders);
+        const schemaResponse = await axios.get(`${restUrl}/`, { headers: baseHeaders, timeout: AXIOS_TIMEOUT });
         const schema = schemaResponse.data;
         const paths = Object.keys(schema.paths);
 
         const publicData: ScanResult['publicData'] = {};
+
         for (const path of paths) {
             if (path === '/' || schema.paths[path]?.get?.tags?.includes('(rpc)')) continue;
-            
+
+            const permissions: Permissions = {
+                GET: 'Not Testable',
+                POST: 'Not Testable',
+            };
+            let tableData: unknown[] | { error: string } = { error: 'No data fetched' };
+
+            // --- GET Check ---
             try {
-                const dataResponse = await fetchWithRetry(`${restUrl}${path}`, apiHeaders);
-                publicData[path] = dataResponse.data;
-            } catch (error: unknown) {
-                let status = 'N/A';
-                if (axios.isAxiosError(error)) {
-                    status = error.response?.status?.toString() || 'N/A';
-                }
-                 publicData[path] = { error: `Access denied or failed to fetch. Status: ${status}` };
+                const { data } = await axios.get(`${restUrl}${path}`, { headers: baseHeaders, timeout: AXIOS_TIMEOUT });
+                permissions.GET = 'Allowed';
+                tableData = data;
+            } catch (error) {
+                permissions.GET = 'Forbidden';
+                tableData = { error: 'Access denied or failed to fetch.' };
             }
+
+            const pathMethods = schema.paths[path];
+
+            // --- POST Check ---
+            if (pathMethods?.post) {
+                try {
+                    await axios.post(`${restUrl}${path}`, {}, {
+                        headers: { ...baseHeaders, 'Content-Type': 'application/json', 'Prefer': 'tx=rollback' },
+                        timeout: AXIOS_TIMEOUT,
+                    });
+                    permissions.POST = 'Allowed';
+                } catch (error: any) {
+                    if (error.response?.status === 400) {
+                        permissions.POST = 'Allowed'; // Likely a data validation error, which means RLS didn't block it.
+                    } else {
+                        permissions.POST = 'Forbidden';
+                    }
+                }
+            }
+
+            
+
+            publicData[path] = { permissions, data: tableData };
         }
 
         return NextResponse.json({
@@ -117,6 +153,7 @@ export async function POST(request: Request) {
             supabaseUrl,
             anonKey,
             publicData,
+            discoveredPaths: uniquePaths,
         }, { status: 200 });
 
     } catch (error: unknown) {

@@ -1,14 +1,25 @@
 # Lovable Site Scanner
 
-This is a Next.js application that allows you to scan a website to determine if it uses Supabase and has any publicly accessible data.
+This is a Next.js application that allows you to scan a website to determine if it uses Supabase and what public permissions are available.
+
+## Features
+
+*   **Credential Discovery:** Analyzes a website's assets to find public Supabase credentials (URL and anon key).
+*   **Comprehensive Permission Analysis:** For each table found, the scanner checks for the following permissions:
+    *   `GET`: Can anonymous users read data?
+    *   `POST`: Can anonymous users insert data?
+    *   `PATCH`: Can anonymous users update data?
+    *   `DELETE`: Can anonymous users delete data?
+*   **Safe, Non-Destructive Scanning:** The scanner uses PostgreSQL's `tx=rollback` feature for all write operations (`POST`, `PATCH`, `DELETE`). This means that while the scanner can accurately determine if a permission is available, **no data is ever actually created, updated, or deleted.**
+*   **PII Analysis:** The scanner performs a basic regex-based check on any public data to identify potential Personally Identifiable Information (PII) like email addresses or phone numbers.
+*   **Collapsible UI:** Presents the results in a clean, easy-to-navigate collapsible interface.
 
 ## How to Use
 
 1.  Enter the URL of the website you want to scan in the input field.
-2.  Click the "Scan Site" button.
-3.  The application will then analyze the website's assets to find Supabase credentials.
-4.  If credentials are found, it will attempt to fetch the database schema and any public data.
-5.  The results will be displayed on the page.
+2.  Check the box to confirm you have permission to scan the site.
+3.  Click the "Scan Site" button.
+4.  The results will be displayed on the page.
 
 ## Deployment
 

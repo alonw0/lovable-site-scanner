@@ -3,11 +3,17 @@
 import { useState, FormEvent, useMemo, useEffect } from 'react';
 
 // Define the result type to match the API response
+type Permissions = {
+    GET: 'Allowed' | 'Forbidden' | 'Not Testable';
+    POST: 'Allowed' | 'Forbidden' | 'Not Testable';
+};
+
 type ScanResult = {
     supabaseUrl?: string;
     anonKey?: string;
     isLovable: boolean;
-    publicData?: Record<string, unknown[] | { error: string }>;
+    publicData?: Record<string, { permissions: Permissions; data: unknown[] | { error: string } }>;
+    discoveredPaths?: string[];
     error?: string;
 };
 
@@ -73,9 +79,20 @@ const AnalysisSummary = ({ publicData, onPiiDetected }: { publicData: ScanResult
     );
 };
 
-
-const CollapsibleData = ({ title, data }: { title: string; data: unknown[] | { error: string } }) => {
+const CollapsibleData = ({ title, data }: { title: string; data: { permissions: Permissions; data: unknown[] | { error: string } } }) => {
     const [isOpen, setIsOpen] = useState(true);
+    const recordCount = Array.isArray(data.data) ? data.data.length : 0;
+
+    const getPermissionIcon = (permission: 'Allowed' | 'Forbidden' | 'Not Testable') => {
+        switch (permission) {
+            case 'Allowed':
+                return <span title="Allowed">✅</span>;
+            case 'Forbidden':
+                return <span title="Forbidden">❌</span>;
+            default:
+                return <span title="Not Testable">❓</span>;
+        }
+    };
 
     return (
         <div className="mt-2 border border-gray-300 rounded-md">
@@ -83,18 +100,93 @@ const CollapsibleData = ({ title, data }: { title: string; data: unknown[] | { e
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full p-2 text-left bg-gray-800 hover:bg-gray-600 flex justify-between items-center rounded-md"
             >
-                <h4 className="font-semibold">{title}</h4>
-                <span>{isOpen ? '▼' : '▶'}</span>
+                <div className="flex items-center">
+                    <h4 className="font-semibold">{title}</h4>
+                    {recordCount > 0 && (
+                        <span className="ml-3 text-xs font-bold text-green-700 bg-green-200 px-2 py-0.5 rounded-full">
+                            {recordCount} {recordCount === 1 ? 'record' : 'records'}
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center">
+                    <div className="mr-2">{getPermissionIcon(data.permissions.GET)} GET</div>
+                    <div className="mr-2">{getPermissionIcon(data.permissions.POST)} POST</div>
+                    <span>{isOpen ? '▼' : '▶'}</span>
+                </div>
             </button>
             {isOpen && (
                 <div className="p-2">
-                    <pre className="overflow-x-auto">{JSON.stringify(data, null, 2)}</pre>
+                    <pre className="overflow-x-auto">{JSON.stringify(data.data, null, 2)}</pre>
                 </div>
             )}
         </div>
     );
 };
 
+const DiscoveredPaths = ({ paths }: { paths: string[] }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const SENSITIVE_KEYWORDS = [
+        'admin', 'dashboard', 'auth', 'login', 'password', 'secret', 'private',
+        'api', 'config', 'env', 'backup', 'wp-admin', 'reset', 'token', 'jwt', 'manage'
+    ];
+
+    const isSensitive = (path: string) => SENSITIVE_KEYWORDS.some(keyword => path.toLowerCase().includes(keyword));
+
+    const { sortedPaths, sensitiveCount } = useMemo(() => {
+        if (!paths) return { sortedPaths: [], sensitiveCount: 0 };
+        const sensitive = paths.filter(isSensitive).sort();
+        const normal = paths.filter(path => !isSensitive(path)).sort();
+        return {
+            sortedPaths: [...sensitive, ...normal],
+            sensitiveCount: sensitive.length
+        };
+    }, [paths]);
+
+    useEffect(() => {
+        if (sensitiveCount > 0) {
+            setIsOpen(true);
+        }
+    }, [sensitiveCount]);
+
+    if (!paths || paths.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-4 border border-gray-300 rounded-md">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full p-2 text-left bg-gray-800 hover:bg-gray-600 flex justify-between items-center rounded-md"
+            >
+                <div className="flex items-center">
+                    <h4 className="font-semibold">Discovered Client-Side Paths ({paths.length})</h4>
+                    {sensitiveCount > 0 && (
+                        <span className="ml-3 text-xs font-bold text-red-700 bg-red-200 px-2 py-0.5 rounded-full">
+                            {sensitiveCount} Sensitive Found
+                        </span>
+                    )}
+                </div>
+                <span>{isOpen ? '▼' : '▶'}</span>
+            </button>
+            {isOpen && (
+                <div className="p-2">
+                    <ul className="list-disc pl-5 bg-gray-900 rounded-md p-4 space-y-2">
+                        {sortedPaths.map(path => {
+                            const sensitive = isSensitive(path);
+                            return (
+                                <li key={path} className={`text-sm break-all ${sensitive ? '' : 'text-white'}`}>
+                                    <code className={sensitive ? 'text-red-400' : ''}>{path}</code>
+                                    {sensitive && <span className="ml-3 text-xs font-bold text-red-700 bg-red-200 px-2 py-0.5 rounded-full">Sensitive</span>}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default function Home() {
     const [url, setUrl] = useState('');
@@ -119,10 +211,14 @@ export default function Home() {
 
             const data: ScanResult = await response.json();
 
-            if (!response.ok || data.error) {
-                setError(data.error || 'An unknown error occurred.');
+            if (!response.ok) {
+                 setError(data.error || 'An unknown server error occurred.');
+                 setResult(null);
             } else {
                 setResult(data);
+                if (data.error) {
+                    setError(data.error);
+                }
             }
         } catch (err: unknown) {
             setError('Failed to connect to the scanning service.');
@@ -135,8 +231,8 @@ export default function Home() {
         <main className="flex min-h-screen flex-col items-center justify-between p-24">
             <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
                 <h1 className="text-4xl font-bold text-center">Lovable Site Scanner</h1>
-                <p className="text-center">
-                    Check your Supabase-powered sites for public data leaks.
+                <p className="text-center my-2">
+                    Check your Supabase-powered sites for public data leaks and discover client-side paths.
                 </p>
 
                 <form onSubmit={handleSubmit} className="flex flex-col items-center w-full">
@@ -168,16 +264,19 @@ export default function Home() {
                     </button>
                 </form>
 
-                {error && <p className="text-red-500">{error}</p>}
+                {error && <p className="text-red-500 mt-4 p-4 bg-red-100 border border-red-500 rounded-md"><strong>Error:</strong> {error}</p>}
                 
                 {result && (
                     <div className="w-full mt-4">
                         <h2 className="text-2xl font-bold">Scan Results</h2>
+
                         {result.isLovable ? (
                             <>
-                                <p><strong>✅ This site is lovable! (or supabase powered)</strong></p>
-                                <p><strong>Supabase URL:</strong> {result.supabaseUrl}</p>
-                                <p><strong>Anon Key:</strong> <code className="break-all">{result.anonKey}</code></p>
+                                <div className="mt-4 p-4 border border-green-500 bg-green-100 rounded-md">
+                                    <p className="text-green-900 font-bold">✅ This site is lovable! (or supabase powered)</p>
+                                    <p className="text-green-900"><strong>Supabase URL:</strong> {result.supabaseUrl}</p>
+                                    <p className="text-green-900"><strong>Anon Key:</strong> <code className="break-all">{result.anonKey}</code></p>
+                                </div>
                                 
                                 <AnalysisSummary publicData={result.publicData} onPiiDetected={setHasPii} />
 
@@ -190,14 +289,26 @@ export default function Home() {
                                     </div>
                                 )}
 
-                                                                <h3 className="mt-4">Public Data Found:</h3>
-                                {result.publicData && Object.entries(result.publicData).map(([path, data]) => (
-                                    <CollapsibleData key={path} title={path} data={data} />
-                                ))}
-                                <h5>We only check GET. If you&apos;re worried, check your POST, PUT and PATCH.</h5>
+                                {result.discoveredPaths && <DiscoveredPaths paths={result.discoveredPaths} />}
+
+                                <h3 className="text-xl font-bold mt-4">Public Supabase Tables:</h3>
+                                {result.publicData && Object.keys(result.publicData).length > 0 ? (
+                                    Object.entries(result.publicData).map(([path, data]) => (
+                                        <CollapsibleData key={path} title={path} data={data} />
+                                    ))
+                                ) : (
+                                    <p>No public tables found.</p>
+                                )}
                             </>
                         ) : (
-                            <p><strong>❌ This site is not lovable or credentials were not found.</strong></p>
+                            // If not lovable, still show paths if they exist
+                            <>
+                                {result.discoveredPaths && result.discoveredPaths.length > 0 ? (
+                                    <DiscoveredPaths paths={result.discoveredPaths} />
+                                ) : (
+                                    !error && <p className="mt-4">Scan complete.</p>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
