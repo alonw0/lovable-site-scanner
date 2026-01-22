@@ -190,6 +190,7 @@ const DiscoveredPaths = ({ paths }: { paths: string[] }) => {
 
 export default function Home() {
     const [url, setUrl] = useState('');
+    const [customJwtKey, setCustomJwtKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<ScanResult | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -206,7 +207,10 @@ export default function Home() {
             const response = await fetch('/api/scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetUrl: url }),
+                body: JSON.stringify({
+                    targetUrl: url,
+                    customJwtKey: customJwtKey || undefined
+                }),
             });
 
             const data: ScanResult = await response.json();
@@ -243,6 +247,13 @@ export default function Home() {
                         placeholder="https://www.example.com"
                         required
                         className="w-full p-2 border border-gray-300 rounded-md"
+                    />
+                    <input
+                        type="text"
+                        value={customJwtKey}
+                        onChange={(e) => setCustomJwtKey(e.target.value)}
+                        placeholder="Custom JWT Key (optional)"
+                        className="w-full p-2 mt-2 border border-gray-300 rounded-md"
                     />
                     <div className="flex items-center mt-2">
                         <input

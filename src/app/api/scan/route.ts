@@ -35,10 +35,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ isLovable: false, error: 'Too many requests. Please wait a minute before trying again.' }, { status: 429 });
     }
 
-    const { targetUrl } = await request.json();
+    const { targetUrl, customJwtKey } = await request.json();
 
     if (!targetUrl || typeof targetUrl !== 'string') {
         return NextResponse.json({ isLovable: false, error: 'A valid URL is required.' }, { status: 400 });
+    }
+
+    if (customJwtKey && typeof customJwtKey !== 'string') {
+        return NextResponse.json({ isLovable: false, error: 'Custom JWT key must be a string.' }, { status: 400 });
     }
 
     try {
@@ -97,7 +101,8 @@ export async function POST(request: Request) {
 
         // --- Phase 2: Data Extraction & Permission Checks ---
         const restUrl = `${supabaseUrl}/rest/v1`;
-        const baseHeaders = { apikey: anonKey, Authorization: `Bearer ${anonKey}` };
+        const authToken = customJwtKey || anonKey;
+        const baseHeaders = { apikey: anonKey, Authorization: `Bearer ${authToken}` };
 
         const schemaResponse = await axios.get(`${restUrl}/`, { headers: baseHeaders, timeout: AXIOS_TIMEOUT });
         const schema = schemaResponse.data;
