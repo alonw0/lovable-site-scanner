@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     try {
         // --- Phase 1: Asset Scan ---
-        const headers = { 'User-Agent': 'LovableSiteScanner/1.0' };
+        const headers = { 'User-Agent': 'SupabaseSiteScanner/1.0' };
         const response = await axios.get(targetUrl, { headers, timeout: AXIOS_TIMEOUT });
         const $ = cheerio.load(response.data);
 
