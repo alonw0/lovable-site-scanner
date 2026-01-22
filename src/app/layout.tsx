@@ -14,16 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lovable Site Scanner",
+  title: "Supabase Site Scanner",
   description: "A simple app to scan websites for Supabase usage and publicly accessible data. Use ethically and with permission.",
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "Lovable Site Scanner",
+    title: "Supabase Site Scanner",
     description: "A simple app to scan websites for Supabase usage and publicly accessible data.",
-    url: "https://lovable-site-scanner.vercel.app",
-    siteName: "Lovable Site Scanner",
+    url: "https://supabase-site-scanner.vercel.app",
+    siteName: "Supabase Site Scanner",
     images: [
       {
         url: "/cover.jpeg",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lovable Site Scanner",
+    title: "Supabase Site Scanner",
     description: "A simple app to scan websites for Supabase usage and publicly accessible data.",
     images: ["/cover.jpeg"],
   },

@@ -234,7 +234,7 @@ export default function Home() {
     return (
         <main className="flex min-h-screen flex-col items-center justify-between p-24">
             <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-                <h1 className="text-4xl font-bold text-center">Lovable Site Scanner</h1>
+                <h1 className="text-4xl font-bold text-center">Supabase Site Scanner</h1>
                 <p className="text-center my-2">
                     Check your Supabase-powered sites for public data leaks and discover client-side paths.
                 </p>
@@ -284,7 +284,7 @@ export default function Home() {
                         {result.isLovable ? (
                             <>
                                 <div className="mt-4 p-4 border border-green-500 bg-green-100 rounded-md">
-                                    <p className="text-green-900 font-bold">✅ This site is lovable! (or supabase powered)</p>
+                                    <p className="text-green-900 font-bold">✅ This site is has supabase!</p>
                                     <p className="text-green-900"><strong>Supabase URL:</strong> {result.supabaseUrl}</p>
                                     <p className="text-green-900"><strong>Anon Key:</strong> <code className="break-all">{result.anonKey}</code></p>
                                 </div>
@@ -293,7 +293,7 @@ export default function Home() {
 
                                 {hasPii && (
                                     <div className="mt-4 p-4 border border-blue-500 bg-blue-100 rounded-md">
-                                        <p className="text-blue-600">For more info, you can refer to: <a className="underline text-red-500" href="https://docs.lovable.dev/features/security">Lovable docs</a></p>
+                                        <p className="text-blue-600">For more info, you can refer to: <a className="underline text-red-500" href="https://supabase.com/docs/guides/database/secure-data">Supabase docs</a></p>
                                         <p className="text-blue-600">Or try this prompt (credit <i>goodtimesKC</i> from r/lovable) - <a className="underline text-red-500" href="https://www.reddit.com/r/lovable/comments/1lmkfhf/comment/n083sqr/">link</a></p>
                                         <br />
                                         <p className="text-blue-800">Still need help fixing those issues in your site or app? Contact us at <a href="mailto:contact@drorsoft.com" className="text-blue-600 hover:underline">contact@drorsoft.com</a> or visit <a href="https://www.drorsoft.com" className="text-blue-600 hover:underline">drorsoft.com</a></p>
